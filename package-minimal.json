@@ -1,0 +1,20 @@
+{
+  "name": "my-cloudflare-docker-proxy",
+  "private": true,
+  "description": "Cloudflare Workers Docker Registry Proxy",
+  "version": "1.0.0",
+  "author": "ciiiii <allen.cccccnm@gmail.com>",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "wrangler": "3.114.9"
+  },
+  "scripts": {
+    "deploy": "npx wrangler deploy src/index.js --env production",
+    "dev": "npx wrangler dev src/index.js --env dev"
+  },
+  "license": "MIT",
+  "main": "src/index.js"
+} 
