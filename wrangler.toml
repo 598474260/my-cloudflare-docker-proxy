@@ -11,12 +11,14 @@ local_protocol = "http"
 CUSTOM_DOMAIN = "workers.dev"
 MODE = "production"
 TARGET_UPSTREAM = ""
+GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
 
 [env.production]
 name = "my-cloudflare-docker-proxy"
 CUSTOM_DOMAIN = "workers.dev"
 MODE = "production"
 TARGET_UPSTREAM = ""
+GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
 
 [build]
 command = "npm run build"

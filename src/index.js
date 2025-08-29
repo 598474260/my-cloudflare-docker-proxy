@@ -16,7 +16,7 @@ const dockerHub = "https://registry-1.docker.io";
 
 // Gemini API配置
 const GEMINI_API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-const GEMINI_API_KEY = "AIzaSyDTHkV3H8XeAtVEFVdxs7_D1wu022eNrqI"; // 需要替换为你的实际API密钥
+const GEMINI_API_KEY = typeof GEMINI_API_KEY !== 'undefined' ? GEMINI_API_KEY : 'YOUR_GEMINI_API_KEY';
 
 // 根据文档配置：支持代理单个registry
 const routes = {
@@ -78,9 +78,12 @@ async function handleRequest(request) {
     );
   }
   
-  // 重定向 /v2/ 到Docker Registry
+  // 处理 /v2/ 路径 - 直接代理到Docker Registry，不重定向
   if (url.pathname == "/v2/") {
-    return Response.redirect(url.protocol + "//" + url.host + "/v2/", 301);
+    const upstream = routeByHosts(url.hostname);
+    if (upstream) {
+      return await handleDockerRegistry(request, url, upstream);
+    }
   }
   
   // 原有的Docker Registry代理逻辑
