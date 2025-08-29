@@ -3,10 +3,10 @@ addEventListener("fetch", (event) => {
   event.respondWith(handleRequest(event.request));
 });
 
-// 环境变量配置，提供硬编码默认值
-const CUSTOM_DOMAIN = "libcuda.so";  // 硬编码默认值
-const MODE = "production";            // 硬编码默认值
-const TARGET_UPSTREAM = "";           // 硬编码默认值
+// 硬编码配置，完全移除环境变量依赖
+const CUSTOM_DOMAIN = "libcuda.so";
+const MODE = "production";
+const TARGET_UPSTREAM = "";
 
 const dockerHub = "https://registry-1.docker.io";
 
@@ -45,9 +45,14 @@ async function handleRequest(request) {
     return new Response(
       JSON.stringify({
         routes: routes,
+        message: "Docker Registry Proxy is running",
+        status: "active"
       }),
       {
         status: 404,
+        headers: {
+          "Content-Type": "application/json"
+        }
       }
     );
   }
@@ -163,19 +168,12 @@ async function fetchToken(wwwAuthenticate, scope, authorization) {
 
 function responseUnauthorized(url) {
   const headers = new Headers();
-  if (MODE == "debug") {
-    headers.set(
-      "Www-Authenticate",
-      `Bearer realm="http://${url.host}/v2/auth",service="cloudflare-docker-proxy"`
-    );
-  } else {
-    headers.set(
-      "Www-Authenticate",
-      `Bearer realm="https://${url.hostname}/v2/auth",service="cloudflare-docker-proxy"`
-    );
-  }
+  headers.set(
+    "Www-Authenticate",
+    `Bearer realm="https://${url.hostname}/v2/auth",service="cloudflare-docker-proxy"`
+  );
   return new Response(JSON.stringify({ message: "UNAUTHORIZED" }), {
     status: 401,
     headers: headers,
   });
-}
+} 
