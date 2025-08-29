@@ -2,6 +2,9 @@ name = "my-cloudflare-docker-proxy"
 compatibility_date = "2024-12-01"
 main = "src/index.js"
 
+# 确保兼容性
+compatibility_flags = ["nodejs_compat"]
+
 [dev]
 ip = "0.0.0.0"
 port = 8787
@@ -41,3 +44,7 @@ routes = [
 [env.staging.vars]
 MODE = "staging"
 TARGET_UPSTREAM = ""
+
+# 添加构建配置
+[build]
+command = "npm run build"

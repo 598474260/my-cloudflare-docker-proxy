@@ -19,10 +19,13 @@
   "scripts": {
     "format": "prettier --write '**/*.{js,css,json,md}'",
     "build": "webpack",
+    "build:worker": "webpack --config webpack.config.js",
     "verify": "node build.js",
+    "verify:worker": "node build-worker.js",
     "dev": "npx wrangler dev src/index.js --env dev",
     "deploy": "npx wrangler deploy src/index.js --env production",
     "deploy:staging": "npx wrangler deploy src/index.js --env staging",
+    "deploy:direct": "npx wrangler@4 deploy src/index.js --env production",
     "clean": "rm -rf dist .yarn/cache"
   },
   "license": "MIT",
