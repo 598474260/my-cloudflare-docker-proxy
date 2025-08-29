@@ -137,12 +137,27 @@ async function handleGeminiAPI(request, url, stripPrefix) {
     const route = geminiRoutes['gemini'];
     const apiPath = stripPrefix ? url.pathname.replace('/gemini/', '') : url.pathname.replace(/^\/+/, '');
     const targetUrl = `${route.url}${apiPath ? '/' + apiPath : ''}`;
-    
-    const newRequest = new Request(targetUrl, {
+
+    // 读取来访者携带的 API Key（优先请求头，其次查询参数 key）
+    const incomingHeaders = new Headers(request.headers);
+    const incomingApiKey = incomingHeaders.get('X-goog-api-key') || url.searchParams.get('key');
+    if (!incomingApiKey) {
+      return new Response(JSON.stringify({ error: 'missing_api_key', message: 'Provide X-goog-api-key header or ?key= query param' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+
+    // 将 key 通过查询参数传递给上游（Google 官方支持）
+    const target = new URL(targetUrl);
+    if (!target.searchParams.has('key')) {
+      target.searchParams.set('key', incomingApiKey);
+    }
+
+    const newRequest = new Request(target.toString(), {
       method: request.method,
       headers: {
-        'Content-Type': 'application/json',
-        'X-goog-api-key': route.apiKey
+        'Content-Type': 'application/json'
       },
       body: request.method !== 'GET' ? await request.text() : undefined
     });
