@@ -34,6 +34,7 @@ routes = [
 [env.production.vars]
 MODE = "production"
 TARGET_UPSTREAM = ""
+CUSTOM_DOMAIN = "libcuda.so"
 
 [env.staging]
 name = "cloudflare-docker-proxy-staging"
@@ -44,6 +45,7 @@ routes = [
 [env.staging.vars]
 MODE = "staging"
 TARGET_UPSTREAM = ""
+CUSTOM_DOMAIN = "libcuda.so"
 
 # 添加构建配置
 [build]

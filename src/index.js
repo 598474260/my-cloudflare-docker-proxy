@@ -3,6 +3,11 @@ addEventListener("fetch", (event) => {
   event.respondWith(handleRequest(event.request));
 });
 
+// 环境变量配置，提供默认值
+const CUSTOM_DOMAIN = typeof CUSTOM_DOMAIN !== 'undefined' ? CUSTOM_DOMAIN : 'libcuda.so';
+const MODE = typeof MODE !== 'undefined' ? MODE : 'production';
+const TARGET_UPSTREAM = typeof TARGET_UPSTREAM !== 'undefined' ? TARGET_UPSTREAM : '';
+
 const dockerHub = "https://registry-1.docker.io";
 
 const routes = {
