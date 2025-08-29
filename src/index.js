@@ -14,9 +14,13 @@ const USERNAME = "598474260"; // 你的实际Cloudflare用户ID
 
 const dockerHub = "https://registry-1.docker.io";
 
-// Gemini API配置
-const GEMINI_API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-const GEMINI_API_KEY = typeof globalThis.GEMINI_API_KEY !== 'undefined' ? globalThis.GEMINI_API_KEY : 'YOUR_GEMINI_API_KEY';
+// Gemini API配置 - 按照原项目风格
+const geminiRoutes = {
+  'gemini': {
+    url: 'https://generativelanguage.googleapis.com',
+    apiKey: typeof globalThis.GEMINI_API_KEY !== 'undefined' ? globalThis.GEMINI_API_KEY : 'YOUR_GEMINI_API_KEY'
+  }
+};
 
 // 根据文档配置：支持代理单个registry
 const routes = {
@@ -63,9 +67,14 @@ async function handleRequest(request) {
     });
   }
   
-  // 检查是否是Gemini API请求 - 优先处理
+  // 当主机为 gemini.liquidglass.cloud 时，全部路径走 Gemini 代理（无需 /gemini 前缀）
+  if (url.hostname === 'gemini.liquidglass.cloud') {
+    return await handleGeminiAPI(request, url, false);
+  }
+  
+  // 检查是否是Gemini API请求 - 优先处理（带 /gemini/ 前缀）
   if (url.pathname.startsWith('/gemini/')) {
-    return await handleGeminiAPI(request, url);
+    return await handleGeminiAPI(request, url, true);
   }
   
   // 检查是否是根路径
@@ -122,28 +131,25 @@ async function handleRequest(request) {
   return await handleDockerRegistry(request, url, upstream);
 }
 
-// 处理Gemini API请求
-async function handleGeminiAPI(request, url) {
+// 处理Gemini API请求 - 按照原项目风格
+async function handleGeminiAPI(request, url, stripPrefix) {
   try {
-    // 移除 /gemini/ 前缀，获取实际的API路径
-    const apiPath = url.pathname.replace('/gemini/', '');
-    const geminiUrl = `${GEMINI_API_ENDPOINT}${apiPath ? '/' + apiPath : ''}`;
+    const route = geminiRoutes['gemini'];
+    const apiPath = stripPrefix ? url.pathname.replace('/gemini/', '') : url.pathname.replace(/^\/+/, '');
+    const targetUrl = `${route.url}${apiPath ? '/' + apiPath : ''}`;
     
-    // 创建新的请求
-    const newRequest = new Request(geminiUrl, {
+    const newRequest = new Request(targetUrl, {
       method: request.method,
       headers: {
         'Content-Type': 'application/json',
-        'X-goog-api-key': GEMINI_API_KEY
+        'X-goog-api-key': route.apiKey
       },
       body: request.method !== 'GET' ? await request.text() : undefined
     });
     
-    // 转发请求到Gemini API
     const response = await fetch(newRequest);
     
-    // 返回响应，添加CORS头
-    const newResponse = new Response(response.body, {
+    return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
       headers: {
@@ -153,8 +159,6 @@ async function handleGeminiAPI(request, url) {
         'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-goog-api-key'
       }
     });
-    
-    return newResponse;
   } catch (error) {
     return new Response(
       JSON.stringify({
