@@ -14,7 +14,7 @@
     "prettier": "^2.4.1",
     "webpack": "^5.65.0",
     "webpack-cli": "^4.9.1",
-    "wrangler": "^4.33.1"
+    "wrangler": "^3.114.9"
   },
   "scripts": {
     "format": "prettier --write '**/*.{js,css,json,md}'",
@@ -25,7 +25,7 @@
     "dev": "npx wrangler dev src/index.js --env dev",
     "deploy": "npx wrangler deploy src/index.js --env production",
     "deploy:staging": "npx wrangler deploy src/index.js --env staging",
-    "deploy:direct": "npx wrangler@4 deploy src/index.js --env production",
+    "deploy:direct": "npx wrangler deploy src/index.js --env production",
     "clean": "rm -rf dist .yarn/cache"
   },
   "license": "MIT",
