@@ -4,14 +4,26 @@ addEventListener("fetch", (event) => {
 });
 
 // 环境变量配置，提供硬编码默认值
-const CUSTOM_DOMAIN = "libcuda.so";  // 硬编码默认值
+const CUSTOM_DOMAIN = "workers.dev";  // 使用默认Worker域名
 const MODE = "production";            // 硬编码默认值
 const TARGET_UPSTREAM = "";           // 硬编码默认值
 
+// Worker信息（根据你的实际配置修改）
+const WORKER_NAME = "my-cloudflare-docker-proxy";
+const USERNAME = "your-username"; // 需要替换为你的实际用户名
+
 const dockerHub = "https://registry-1.docker.io";
 
+// Gemini API配置
+const GEMINI_API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const GEMINI_API_KEY = "AIzaSyDTHkV3H8XeAtVEFVdxs7_D1wu022eNrqI"; // 需要替换为你的实际API密钥
+
+// 根据文档配置：支持代理单个registry
 const routes = {
-  // production
+  // 使用默认Worker域名，只代理Docker Hub
+  [`${WORKER_NAME}.${USERNAME}.workers.dev/`]: dockerHub,
+  
+  // 保留原有的多域名支持（如果需要的话）
   ["docker." + CUSTOM_DOMAIN]: dockerHub,
   ["quay." + CUSTOM_DOMAIN]: "https://quay.io",
   ["gcr." + CUSTOM_DOMAIN]: "https://gcr.io",
@@ -37,22 +49,94 @@ function routeByHosts(host) {
 
 async function handleRequest(request) {
   const url = new URL(request.url);
+  
+  // 检查是否是Gemini API请求
+  if (url.pathname.startsWith('/gemini/')) {
+    return await handleGeminiAPI(request, url);
+  }
+  
+  // 原有的Docker Registry代理逻辑
   if (url.pathname == "/") {
     return Response.redirect(url.protocol + "//" + url.host + "/v2/", 301);
   }
+  
   const upstream = routeByHosts(url.hostname);
   if (upstream === "") {
     return new Response(
       JSON.stringify({
         routes: routes,
+        message: "Docker Registry Proxy is running",
+        status: "active",
+        features: ["docker-registry", "gemini-api"]
       }),
       {
         status: 404,
+        headers: {
+          "Content-Type": "application/json"
+        }
       }
     );
   }
+  
+  // 继续原有的Docker Registry代理逻辑
+  return await handleDockerRegistry(request, url, upstream);
+}
+
+// 处理Gemini API请求
+async function handleGeminiAPI(request, url) {
+  try {
+    // 移除 /gemini/ 前缀，获取实际的API路径
+    const apiPath = url.pathname.replace('/gemini/', '');
+    const geminiUrl = `${GEMINI_API_ENDPOINT}${apiPath ? '/' + apiPath : ''}`;
+    
+    // 创建新的请求
+    const newRequest = new Request(geminiUrl, {
+      method: request.method,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-goog-api-key': GEMINI_API_KEY
+      },
+      body: request.method !== 'GET' ? await request.text() : undefined
+    });
+    
+    // 转发请求到Gemini API
+    const response = await fetch(newRequest);
+    
+    // 返回响应，添加CORS头
+    const newResponse = new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: {
+        ...Object.fromEntries(response.headers.entries()),
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-goog-api-key'
+      }
+    });
+    
+    return newResponse;
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        error: "Failed to proxy Gemini API request",
+        message: error.message
+      }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
+      }
+    );
+  }
+}
+
+// 处理Docker Registry请求（原有的逻辑）
+async function handleDockerRegistry(request, url, upstream) {
   const isDockerHub = upstream == dockerHub;
   const authorization = request.headers.get("Authorization");
+  
   if (url.pathname == "/v2/") {
     const newUrl = new URL(upstream + "/v2/");
     const headers = new Headers();
@@ -70,6 +154,7 @@ async function handleRequest(request) {
     }
     return resp;
   }
+  
   // get token
   if (url.pathname == "/v2/auth") {
     const newUrl = new URL(upstream + "/v2/");
@@ -97,6 +182,7 @@ async function handleRequest(request) {
     }
     return await fetchToken(wwwAuthenticate, scope, authorization);
   }
+  
   // redirect for DockerHub library images
   // Example: /v2/busybox/manifests/latest => /v2/library/busybox/manifests/latest
   if (isDockerHub) {
@@ -108,6 +194,7 @@ async function handleRequest(request) {
       return Response.redirect(redirectUrl, 301);
     }
   }
+  
   // foward requests
   const newUrl = new URL(upstream + url.pathname);
   const newReq = new Request(newUrl, {
@@ -163,17 +250,10 @@ async function fetchToken(wwwAuthenticate, scope, authorization) {
 
 function responseUnauthorized(url) {
   const headers = new Headers();
-  if (MODE == "debug") {
-    headers.set(
-      "Www-Authenticate",
-      `Bearer realm="http://${url.host}/v2/auth",service="cloudflare-docker-proxy"`
-    );
-  } else {
-    headers.set(
-      "Www-Authenticate",
-      `Bearer realm="https://${url.hostname}/v2/auth",service="cloudflare-docker-proxy"`
-    );
-  }
+  headers.set(
+    "Www-Authenticate",
+    `Bearer realm="https://${url.hostname}/v2/auth",service="cloudflare-docker-proxy"`
+  );
   return new Response(JSON.stringify({ message: "UNAUTHORIZED" }), {
     status: 401,
     headers: headers,
