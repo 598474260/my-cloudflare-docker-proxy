@@ -50,24 +50,48 @@ function routeByHosts(host) {
 async function handleRequest(request) {
   const url = new URL(request.url);
   
-  // 检查是否是Gemini API请求
+  // 检查是否是Gemini API请求 - 优先处理
   if (url.pathname.startsWith('/gemini/')) {
     return await handleGeminiAPI(request, url);
   }
   
-  // 原有的Docker Registry代理逻辑
+  // 检查是否是根路径
   if (url.pathname == "/") {
-    return Response.redirect(url.protocol + "//" + url.host + "/v2/", 301);
-  }
-  
-  const upstream = routeByHosts(url.hostname);
-  if (upstream === "") {
     return new Response(
       JSON.stringify({
         routes: routes,
         message: "Docker Registry Proxy is running",
         status: "active",
-        features: ["docker-registry", "gemini-api"]
+        features: ["docker-registry", "gemini-api"],
+        endpoints: {
+          "gemini": "/gemini/",
+          "docker": "/v2/",
+          "example": "/gemini/v1beta/models/gemini-2.0-flash:generateContent"
+        }
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+  }
+  
+  // 重定向 /v2/ 到Docker Registry
+  if (url.pathname == "/v2/") {
+    return Response.redirect(url.protocol + "//" + url.host + "/v2/", 301);
+  }
+  
+  // 原有的Docker Registry代理逻辑
+  const upstream = routeByHosts(url.hostname);
+  if (upstream === "") {
+    return new Response(
+      JSON.stringify({
+        error: "Route not found",
+        message: "This path is not configured for proxy",
+        available_routes: Object.keys(routes),
+        gemini_endpoint: "/gemini/"
       }),
       {
         status: 404,
