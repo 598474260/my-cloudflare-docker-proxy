@@ -10,18 +10,18 @@ const TARGET_UPSTREAM = "";           // 硬编码默认值
 
 // Worker信息（根据你的实际配置修改）
 const WORKER_NAME = "my-cloudflare-docker-proxy";
-const USERNAME = "your-username"; // 需要替换为你的实际用户名
+const USERNAME = "598474260"; // 你的实际Cloudflare用户ID
 
 const dockerHub = "https://registry-1.docker.io";
 
 // Gemini API配置
 const GEMINI_API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-const GEMINI_API_KEY = typeof GEMINI_API_KEY !== 'undefined' ? GEMINI_API_KEY : 'YOUR_GEMINI_API_KEY';
+const GEMINI_API_KEY = typeof globalThis.GEMINI_API_KEY !== 'undefined' ? globalThis.GEMINI_API_KEY : 'YOUR_GEMINI_API_KEY';
 
 // 根据文档配置：支持代理单个registry
 const routes = {
   // 使用默认Worker域名，只代理Docker Hub
-  [`${WORKER_NAME}.${USERNAME}.workers.dev/`]: dockerHub,
+  [`${WORKER_NAME}.${USERNAME}.workers.dev`]: dockerHub,
   
   // 保留原有的多域名支持（如果需要的话）
   ["docker." + CUSTOM_DOMAIN]: dockerHub,
@@ -49,6 +49,19 @@ function routeByHosts(host) {
 
 async function handleRequest(request) {
   const url = new URL(request.url);
+  
+  // 处理OPTIONS请求（CORS预检）
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-goog-api-key',
+        'Access-Control-Max-Age': '86400'
+      }
+    });
+  }
   
   // 检查是否是Gemini API请求 - 优先处理
   if (url.pathname.startsWith('/gemini/')) {
