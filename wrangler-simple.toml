@@ -2,27 +2,23 @@ name = "my-cloudflare-docker-proxy"
 compatibility_date = "2024-12-01"
 main = "src/index.js"
 
-# 确保兼容性
-compatibility_flags = ["nodejs_compat"]
+# 全局环境变量
+CUSTOM_DOMAIN = "libcuda.so"
+MODE = "production"
+TARGET_UPSTREAM = ""
 
 [dev]
 ip = "0.0.0.0"
 port = 8787
 local_protocol = "http"
 
-[env.vars]
-CUSTOM_DOMAIN = "libcuda.so"
-
-[env.dev.vars]
+[env.dev]
+CUSTOM_DOMAIN = "example.com"
 MODE = "debug"
 TARGET_UPSTREAM = "https://registry-1.docker.io"
-CUSTOM_DOMAIN = "example.com"
 
 [env.production]
 name = "cloudflare-docker-proxy"
-CUSTOM_DOMAIN = "libcuda.so"
-MODE = "production"
-TARGET_UPSTREAM = ""
 routes = [
   { pattern = "docker.libcuda.so/*", custom_domain = true },
   { pattern = "quay.libcuda.so/*", custom_domain = true },
@@ -36,13 +32,6 @@ routes = [
 
 [env.staging]
 name = "cloudflare-docker-proxy-staging"
-CUSTOM_DOMAIN = "libcuda.so"
-MODE = "staging"
-TARGET_UPSTREAM = ""
 routes = [
   { pattern = "docker-staging.libcuda.so/*", custom_domain = true }
-]
-
-# 添加构建配置
-[build]
-command = "npm run build"
+] 
