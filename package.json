@@ -1,9 +1,14 @@
 {
   "name": "my-cloudflare-docker-proxy",
   "private": true,
-  "description": "",
+  "description": "Cloudflare Workers Docker Registry Proxy - 支持多个Docker镜像仓库的代理服务",
   "version": "1.0.0",
   "author": "ciiiii <allen.cccccnm@gmail.com>",
+  "engines": {
+    "node": ">=18.0.0",
+    "yarn": ">=4.0.0"
+  },
+  "packageManager": "yarn@4.9.1",
   "dependencies": {},
   "devDependencies": {
     "prettier": "^2.4.1",
@@ -14,7 +19,10 @@
   "scripts": {
     "format": "prettier --write '**/*.{js,css,json,md}'",
     "build": "webpack",
-    "dev": "npx wrangler dev src/index.js --env dev"
+    "dev": "npx wrangler dev src/index.js --env dev",
+    "deploy": "npx wrangler deploy src/index.js --env production",
+    "deploy:staging": "npx wrangler deploy src/index.js --env staging",
+    "clean": "rm -rf dist .yarn/cache"
   },
   "license": "MIT",
   "main": "src/index.js"
